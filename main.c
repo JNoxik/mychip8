@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "chip8.h"
+#include "dbg.h"
 #include "sdl.h"
 
 typedef struct {
@@ -13,6 +14,7 @@ typedef struct {
     int         hz;
     int         volume;
     bool        nosound;
+    int         debug;
 } cfg_t;
 
 
@@ -24,6 +26,10 @@ static void usage(const char *prog)
             "  -p   palette (bw or amber, default bw)\n"
             "  -s   pixel scale (default 20)\n"
             "  -hz  CPU frequency (default 500)\n"
+            "  -nosound  Disable sound\n"
+            "  -debug    Debug mode (0 - disable,\n"
+            "                        1 - log to file,\n"
+            "                        2 - step-by-step)\n"
             , prog);
 }
 
@@ -36,6 +42,7 @@ static cfg_t parse_args(int argc, char *argv[])
     cfg.hz = 500;
     cfg.volume = 30;
     cfg.nosound = false;
+    cfg.debug = 0;
 
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
@@ -49,7 +56,7 @@ static cfg_t parse_args(int argc, char *argv[])
         } 
         else if (strcmp(argv[i], "-s") == 0 && i + 1 < argc) {
             cfg.scale = atoi(argv[++i]);
-            if (cfg.scale < 1 || cfg.scale > 32) {
+            if (cfg.scale < 1) {
                 fprintf(stderr, "Scale must be >1\n");
                 exit(EXIT_FAILURE);
             }
@@ -70,6 +77,10 @@ static cfg_t parse_args(int argc, char *argv[])
         } 
         else if (strcmp(argv[i], "-nosound") == 0) {
             cfg.nosound = true;
+        }
+        else if (strcmp(argv[i], "-debug") == 0 && i + 1 < argc) {
+            cfg.debug = atoi(argv[++i]);
+            if (cfg.debug < 0 || cfg.debug > 2) cfg.debug = 0;
         }
         else {
             usage(argv[0]);
@@ -138,6 +149,8 @@ int main(int argc, char *argv[])
     }
     chip8->PC = 0x200;
 
+    debug_init(cfg.debug);
+
     window_t *win = sdl_init(cfg.scale);
     if (!win) {
         chip8_destroy(chip8);
@@ -169,6 +182,7 @@ int main(int argc, char *argv[])
         cycles_accum += delta * cfg.hz / 1000;
         while (cycles_accum > 0) {
             chip8_cycle(chip8);
+            if (cfg.debug == 2) break;
             cycles_accum--;
         }
 
@@ -184,5 +198,6 @@ int main(int argc, char *argv[])
     sdl_audio_destroy();
     sdl_destroy(win);
     chip8_destroy(chip8);
+    debug_destroy();
     return 0;
 }

@@ -2,11 +2,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
-
 #include <stdio.h>
 
+#include "dbg.h"
 #include "chip8.h"
-
 
 /* Init/Destroy */
 chip8_t* chip8_init(void) 
@@ -41,6 +40,8 @@ static uint16_t chip8_fetch(chip8_t *c) {
 void chip8_cycle(chip8_t *c) {
     uint16_t op = chip8_fetch(c);
     c->PC += 2;
+
+    debug_log(c, op);
 
     uint8_t  x = (op >> 8) & 0x0F;
     uint8_t  y = (op >> 4) & 0x0F;
